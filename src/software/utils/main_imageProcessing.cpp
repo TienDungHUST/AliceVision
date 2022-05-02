@@ -26,7 +26,7 @@
 
 // These constants define the current software version.
 // They must be updated when the command line is changed.
-#define ALICEVISION_SOFTWARE_VERSION_MAJOR 2
+#define ALICEVISION_SOFTWARE_VERSION_MAJOR 3
 #define ALICEVISION_SOFTWARE_VERSION_MINOR 0
 
 using namespace aliceVision;
@@ -406,7 +406,7 @@ void processImage(image::Image<image::RGBAfColor>& image, const ProcessingParams
 }
 
 void saveImage(image::Image<image::RGBAfColor>& image, const std::string& inputPath, const std::string& outputPath,
-               const std::vector<std::string>& metadataFolders, const EImageFormat outputFormat,
+               const std::vector<std::string>& metadataFolders, const image::EImageColorSpace workingColorSpace, const EImageFormat outputFormat,
                const image::EImageColorSpace outputColorSpace, const image::EStorageDataType storageDataType)
 {
     // Read metadata path
@@ -452,6 +452,8 @@ void saveImage(image::Image<image::RGBAfColor>& image, const std::string& inputP
 
     oiio::ParamValueList metadata = image::readImageMetadata(metadataFilePath);
 
+    metadata.add_or_replace(oiio::ParamValue("AliceVision:ColorSpace", (workingColorSpace == image::EImageColorSpace::SRGB_LINEAR) ? "Linear" : image::EImageColorSpace_enumToString(workingColorSpace)));
+
     if(isEXR)
     {
         // Select storage data type
@@ -488,7 +490,8 @@ int aliceVision_main(int argc, char * argv[])
     std::vector<std::string> metadataFolders;
     std::string outputPath;
     EImageFormat outputFormat = EImageFormat::RGBA;
-    image::EImageColorSpace outputColorSpace = image::EImageColorSpace::LINEAR;
+    image::EImageColorSpace workingColorSpace = image::EImageColorSpace::SRGB_LINEAR;
+    image::EImageColorSpace outputColorSpace = image::EImageColorSpace::SRGB_LINEAR;
     image::EStorageDataType storageDataType = image::EStorageDataType::Float;
     std::string extension;
 
@@ -564,6 +567,9 @@ int aliceVision_main(int argc, char * argv[])
                                  " * A, B: parameters that have a different interpretation depending on the method chosen.\n"
                                  " * mono: If is true, a single noise value will be applied to all channels otherwise a separate noise value will be computed for each channel.")
 
+        ("workingColorSpace", po::value<image::EImageColorSpace>(&workingColorSpace)->default_value(workingColorSpace),
+         ("Working color space: " + image::EImageColorSpace_informations()).c_str())
+
         ("outputFormat", po::value<EImageFormat>(&outputFormat)->default_value(outputFormat),
          "Output image format (rgba, rgb, grayscale)")
 
@@ -613,7 +619,7 @@ int aliceVision_main(int argc, char * argv[])
     ALICEVISION_COUT("Program called with the following parameters:");
     ALICEVISION_COUT(vm);
 
-      // Set verbose level
+    // Set verbose level
     system::Logger::get()->setLogLevel(verboseLevel);
 
     // check user choose at least one input option
@@ -710,7 +716,7 @@ int aliceVision_main(int argc, char * argv[])
 
 
             image::ImageReadOptions options;
-            options.outputColorSpace = image::EImageColorSpace::LINEAR;
+            options.workingColorSpace = workingColorSpace;
             options.applyWhiteBalance = view.getApplyWhiteBalance();
 
             // Read original image
@@ -735,7 +741,7 @@ int aliceVision_main(int argc, char * argv[])
             processImage(image, pParams);
 
             // Save the image
-            saveImage(image, viewPath, outputfilePath, metadataFolders, outputFormat, outputColorSpace, storageDataType);
+            saveImage(image, viewPath, outputfilePath, metadataFolders, workingColorSpace, outputFormat, outputColorSpace, storageDataType);
 
             // Update view for this modification
             view.setImagePath(outputfilePath);
@@ -812,7 +818,7 @@ int aliceVision_main(int argc, char * argv[])
         }
 
         int i = 0;
-        for(const std::string& inputFilePath : filesStrPaths)
+        for (const std::string& inputFilePath : filesStrPaths)
         {
             const fs::path path = fs::path(inputFilePath);
             const std::string filename = path.stem().string();
@@ -824,13 +830,13 @@ int aliceVision_main(int argc, char * argv[])
 
             // Read original image
             image::Image<image::RGBAfColor> image;
-            image::readImage(inputFilePath, image, image::EImageColorSpace::LINEAR);
+            image::readImage(inputFilePath, image, workingColorSpace);
 
             // Image processing
             processImage(image, pParams);
 
             // Save the image
-            saveImage(image, inputFilePath, outputFilePath, metadataFolders, outputFormat, outputColorSpace, storageDataType);
+            saveImage(image, inputFilePath, outputFilePath, metadataFolders, workingColorSpace, outputFormat, outputColorSpace, storageDataType);
         }
     }
 
