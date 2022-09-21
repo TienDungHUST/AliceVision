@@ -58,13 +58,14 @@ enum class EImageFileType
 struct ImageReadOptions
 {  
   ImageReadOptions(EImageColorSpace colorSpace = EImageColorSpace::AUTO, bool useWhiteBalance = true, const std::string& colorProfile="", const oiio::ROI& roi = oiio::ROI()) :
-  outputColorSpace(colorSpace), applyWhiteBalance(useWhiteBalance), colorProfileFileName(colorProfile), subROI(roi)
+  outputColorSpace(colorSpace), applyWhiteBalance(useWhiteBalance), colorProfileFileName(colorProfile), applyToneCurve(false), subROI(roi)
   {
   }
 
   EImageColorSpace outputColorSpace;
   bool applyWhiteBalance;
   std::string colorProfileFileName;
+  bool applyToneCurve;
 
   //ROI for this image.
   //If the image contains an roi, this is the roi INSIDE the roi.

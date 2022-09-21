@@ -363,6 +363,7 @@ void readImage(const std::string& path,
       alicevision::image::DCPProfile colorProfile(imageReadOptions.colorProfileFileName);
 
       alicevision::image::DCPProfileApplyParams DCPparams;
+      DCPparams.use_tone_curve = imageReadOptions.applyToneCurve;
 
       colorProfile.apply(inBuf, DCPparams);
   }
