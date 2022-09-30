@@ -30,22 +30,62 @@ namespace
 {
     std::string getDefaultColorConfigFilePath()
     {
-        char const* val = getenv("ALICEVISION_ROOT");
-        if (val == NULL)
+        std::string configOCIOFilePath = "";
+
+        char const* ALICEVISION_OCIO = getenv("ALICEVISION_OCIO");
+        if (ALICEVISION_OCIO != NULL)
         {
-            ALICEVISION_THROW_ERROR("ALICEVISION_ROOT is not defined, OCIO config file cannot be accessed.");
+            configOCIOFilePath = std::string(ALICEVISION_OCIO);
+            if (fs::exists(configOCIOFilePath))
+            {
+                ALICEVISION_LOG_TRACE("ALICEVISION_OCIO configuration file: '" << configOCIOFilePath << "' found.");
+                return configOCIOFilePath;
+            }
+            else if (configOCIOFilePath == "")
+            {
+                ALICEVISION_LOG_TRACE("ALICEVISION_OCIO is empty. Try OCIO...");
+            }
+            else
+            {
+                ALICEVISION_LOG_TRACE("ALICEVISION_OCIO does not point to an existing file. Try OCIO...");
+            }
         }
-        std::string configOCIOFilePath = std::string(val);
+
+        char const* OCIO = getenv("OCIO");
+        if (OCIO != NULL)
+        {
+            configOCIOFilePath = std::string(OCIO);
+            if (fs::exists(configOCIOFilePath))
+            {
+                ALICEVISION_LOG_TRACE("OCIO configuration file: '" << configOCIOFilePath << "' found.");
+                return configOCIOFilePath;
+            }
+            else if (configOCIOFilePath == "")
+            {
+                ALICEVISION_LOG_TRACE("OCIO is empty. Use embedded config...");
+            }
+            else
+            {
+                ALICEVISION_LOG_TRACE("OCIO does not point to an existing file. Use embedded config...");
+            }
+        }
+
+        char const* ALICEVISION_ROOT = getenv("ALICEVISION_ROOT");
+        if (ALICEVISION_ROOT == NULL)
+        {
+            ALICEVISION_THROW_ERROR("ALICEVISION_ROOT is not defined, embedded OCIO config file cannot be accessed.");
+        }
+        configOCIOFilePath = std::string(ALICEVISION_ROOT);
         configOCIOFilePath.append("/share/aliceVision/config.ocio");
 
         if (!fs::exists(configOCIOFilePath))
         {
-            ALICEVISION_THROW_ERROR("OCIO configuration file: '" << configOCIOFilePath << "' does not exist.");
+            ALICEVISION_THROW_ERROR("Embedded OCIO configuration file: '" << configOCIOFilePath << "' cannot be accessed.");
             configOCIOFilePath = "";
         }
         else
         {
-            ALICEVISION_LOG_TRACE("OCIO configuration file: '" << configOCIOFilePath << "' found.");
+            ALICEVISION_LOG_TRACE("Embedded OCIO configuration file: '" << configOCIOFilePath << "' found.");
         }
 
         return configOCIOFilePath;
@@ -78,9 +118,9 @@ void initColorConfigOCIO(const std::string& colorConfigFilePath)
 std::string EImageColorSpace_informations()
 {
     return EImageColorSpace_enumToString(EImageColorSpace::AUTO) + ", " +
-           EImageColorSpace_enumToString(EImageColorSpace::SRGB_LINEAR) + ", " +
+           EImageColorSpace_enumToString(EImageColorSpace::LINEAR) + ", " +
            EImageColorSpace_enumToString(EImageColorSpace::SRGB) + ", " +
-           EImageColorSpace_enumToString(EImageColorSpace::ACES) + ", " +
+           EImageColorSpace_enumToString(EImageColorSpace::ACES2065_1) + ", " +
            EImageColorSpace_enumToString(EImageColorSpace::ACEScg) + ", " +
            EImageColorSpace_enumToString(EImageColorSpace::NO_CONVERSION);
 }
@@ -91,12 +131,12 @@ EImageColorSpace EImageColorSpace_stringToEnum(const std::string& dataType)
 
     if(type == "auto")
         return EImageColorSpace::AUTO;
-    if((type == "srgb_linear")||(type == "linear"))
-        return EImageColorSpace::SRGB_LINEAR;
+    if(type == "linear")
+        return EImageColorSpace::LINEAR;
     if(type == "srgb")
         return EImageColorSpace::SRGB;
-    if(type == "aces")
-        return EImageColorSpace::ACES;
+    if(type == "ACES2065-1")
+        return EImageColorSpace::ACES2065_1;
     if(type == "acescg")
         return EImageColorSpace::ACEScg;
     if(type == "no_conversion")
@@ -111,12 +151,12 @@ std::string EImageColorSpace_enumToString(const EImageColorSpace dataType)
     {
         case EImageColorSpace::AUTO:
             return "auto";
-        case EImageColorSpace::SRGB_LINEAR:
-            return "srgb_linear";
+        case EImageColorSpace::LINEAR:
+            return "linear";
         case EImageColorSpace::SRGB:
             return "srgb";
-        case EImageColorSpace::ACES:
-            return "aces";
+        case EImageColorSpace::ACES2065_1:
+            return "ACES2065-1";
         case EImageColorSpace::ACEScg:
             return "acescg";
         case EImageColorSpace::NO_CONVERSION:
@@ -129,7 +169,7 @@ bool isValidColorSpace(std::string colorSpace)
 {
     const std::string CSlc = boost::to_lower_copy(colorSpace);
 
-    return (CSlc == "auto") || (CSlc == "srgb_linear") || (CSlc == "linear") || (CSlc == "srgb") || (CSlc == "aces") || (CSlc == "acescg") || (CSlc == "no_conversion");
+    return (CSlc == "auto") || (CSlc == "linear") || (CSlc == "srgb") || (CSlc == "aces") || (CSlc == "acescg") || (CSlc == "no_conversion");
 }
 
 std::ostream& operator<<(std::ostream& os, EImageColorSpace dataType)
@@ -183,7 +223,7 @@ EImageColorSpace getImageColorSpace(const std::string imagePath)
     {
         size_t npos = imagePath.find_last_of(".");
         std::string ext = imagePath.substr(npos + 1);
-        std::string forcedColorSpace = (ext == "exr" || ext == "EXR") ? "sRGB_linear" : "sRGB";
+        std::string forcedColorSpace = (ext == "exr" || ext == "EXR") ? "linear" : "sRGB";
 
         ALICEVISION_LOG_WARNING("The color space " << colorSpace << " detected for " << imagePath << " is not supported. Force Color space to " << forcedColorSpace << ".");
         colorSpace = forcedColorSpace;
@@ -458,7 +498,7 @@ void readImage(const std::string& path,
       inputColorSpace = EImageColorSpace_enumToString(getImageColorSpace(path));
       if (EImageColorSpace_stringToEnum(boost::to_lower_copy(inputColorSpace)) != imageReadOptions.workingColorSpace)
       {
-          std::string outputColorSpace = (imageReadOptions.workingColorSpace == EImageColorSpace::SRGB_LINEAR) ? "linear" : EImageColorSpace_enumToString(imageReadOptions.workingColorSpace);
+          std::string outputColorSpace = (imageReadOptions.workingColorSpace == EImageColorSpace::LINEAR) ? "linear" : EImageColorSpace_enumToString(imageReadOptions.workingColorSpace);
           oiio::ImageBufAlgo::colorconvert(inBuf, inBuf, inputColorSpace, outputColorSpace, true, "", "", &colorConfigOCIO);
           ALICEVISION_LOG_TRACE("Convert image " << path << " from " << inputColorSpace << " to " << outputColorSpace << " colorspace");
       }
@@ -591,7 +631,7 @@ void writeImage(const std::string& path,
     if(isJPG || isPNG)
         outputImageColorSpace = EImageColorSpace::SRGB;
     else
-        outputImageColorSpace = EImageColorSpace::SRGB_LINEAR;
+        outputImageColorSpace = EImageColorSpace::LINEAR;
   }
 
   oiio::ImageSpec imageSpec(image.Width(), image.Height(), nchannels, typeDesc);
@@ -611,8 +651,8 @@ void writeImage(const std::string& path,
   const oiio::ImageBuf* outBuf = &imgBuf;  // buffer to write
 
   oiio::ImageBuf colorspaceBuf; // buffer for image colorspace modification
-  if(((outputImageColorSpace == EImageColorSpace::SRGB) && (EImageColorSpace_stringToEnum(currentColorSpace) == EImageColorSpace::SRGB_LINEAR)) ||
-     ((outputImageColorSpace == EImageColorSpace::SRGB_LINEAR) && (EImageColorSpace_stringToEnum(currentColorSpace) == EImageColorSpace::SRGB)))
+  if(((outputImageColorSpace == EImageColorSpace::SRGB) && (EImageColorSpace_stringToEnum(currentColorSpace) == EImageColorSpace::LINEAR)) ||
+     ((outputImageColorSpace == EImageColorSpace::LINEAR) && (EImageColorSpace_stringToEnum(currentColorSpace) == EImageColorSpace::SRGB)))
   {
       oiio::ImageBufAlgo::colorconvert(colorspaceBuf, *outBuf, currentColorSpace, EImageColorSpace_enumToString(outputImageColorSpace));
       outBuf = &colorspaceBuf;
@@ -620,7 +660,7 @@ void writeImage(const std::string& path,
   else if((outputImageColorSpace != EImageColorSpace_stringToEnum(currentColorSpace)) && (outputImageColorSpace != EImageColorSpace::NO_CONVERSION))
   {
       oiio::ImageBufAlgo::colorconvert(colorspaceBuf, *outBuf, currentColorSpace,
-                                       (outputImageColorSpace == EImageColorSpace::SRGB_LINEAR) ? "Linear" : EImageColorSpace_enumToString(outputImageColorSpace),
+                                       (outputImageColorSpace == EImageColorSpace::LINEAR) ? "Linear" : EImageColorSpace_enumToString(outputImageColorSpace),
                                        true, "", "", &colorConfigOCIO);
       outBuf = &colorspaceBuf;
   }
@@ -686,7 +726,7 @@ void writeImageNoFloat(const std::string& path,
     if(isJPG || isPNG)
       imageColorSpace = EImageColorSpace::SRGB;
     else
-      imageColorSpace = EImageColorSpace::SRGB_LINEAR;
+      imageColorSpace = EImageColorSpace::LINEAR;
   }
 
   oiio::ImageSpec imageSpec(image.Width(), image.Height(), 1, typeDesc);
@@ -807,12 +847,12 @@ bool tryLoadMask(Image<unsigned char>* mask, const std::vector<std::string>& mas
 
             if (fs::exists(idMaskPath))
             {
-                readImage(idMaskPath.string(), *mask, EImageColorSpace::SRGB_LINEAR);
+                readImage(idMaskPath.string(), *mask, EImageColorSpace::LINEAR);
                 return true;
             }
             else if (fs::exists(nameMaskPath))
             {
-                readImage(nameMaskPath.string(), *mask, EImageColorSpace::SRGB_LINEAR);
+                readImage(nameMaskPath.string(), *mask, EImageColorSpace::LINEAR);
                 return true;
             }
         }

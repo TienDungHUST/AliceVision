@@ -452,7 +452,7 @@ void saveImage(image::Image<image::RGBAfColor>& image, const std::string& inputP
 
     oiio::ParamValueList metadata = image::readImageMetadata(metadataFilePath);
 
-    metadata.add_or_replace(oiio::ParamValue("AliceVision:ColorSpace", (workingColorSpace == image::EImageColorSpace::SRGB_LINEAR) ? "Linear" : image::EImageColorSpace_enumToString(workingColorSpace)));
+    metadata.add_or_replace(oiio::ParamValue("AliceVision:ColorSpace", (workingColorSpace == image::EImageColorSpace::LINEAR) ? "Linear" : image::EImageColorSpace_enumToString(workingColorSpace)));
 
     if(isEXR)
     {
@@ -490,8 +490,8 @@ int aliceVision_main(int argc, char * argv[])
     std::vector<std::string> metadataFolders;
     std::string outputPath;
     EImageFormat outputFormat = EImageFormat::RGBA;
-    image::EImageColorSpace workingColorSpace = image::EImageColorSpace::SRGB_LINEAR;
-    image::EImageColorSpace outputColorSpace = image::EImageColorSpace::SRGB_LINEAR;
+    image::EImageColorSpace workingColorSpace = image::EImageColorSpace::LINEAR;
+    image::EImageColorSpace outputColorSpace = image::EImageColorSpace::LINEAR;
     image::EStorageDataType storageDataType = image::EStorageDataType::Float;
     std::string extension;
 

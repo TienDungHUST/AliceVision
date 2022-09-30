@@ -41,7 +41,7 @@ enum class EImageFileType
 enum class EImageColorSpace
 {
   AUTO,
-  SRGB_LINEAR,
+  LINEAR,
   SRGB,
   LAB,
   XYZ,
@@ -51,7 +51,7 @@ enum class EImageColorSpace
 
 struct OutputFileColorSpace
 {
-    EImageColorSpace from{EImageColorSpace::SRGB_LINEAR};
+    EImageColorSpace from{EImageColorSpace::LINEAR};
     EImageColorSpace to{EImageColorSpace::AUTO};
 
     OutputFileColorSpace(EImageColorSpace from_, EImageColorSpace to_)

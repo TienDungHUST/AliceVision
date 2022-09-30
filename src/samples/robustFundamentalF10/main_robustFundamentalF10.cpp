@@ -84,10 +84,10 @@ int main(int argc, char **argv)
   std::mt19937 randomNumberGenerator;
 
   Image<float> imageLeft;
-  readImage(filenameLeft, imageLeft, EImageColorSpace::SRGB_LINEAR);
+  readImage(filenameLeft, imageLeft, EImageColorSpace::LINEAR);
   const auto imageLeftSize = std::make_pair(imageLeft.Width(), imageLeft.Height());
   Image<float> imageRight;
-  readImage(filenameRight, imageRight, EImageColorSpace::SRGB_LINEAR);
+  readImage(filenameRight, imageRight, EImageColorSpace::LINEAR);
   const auto imageRightSize = std::make_pair(imageRight.Width(), imageRight.Height());
 
   //--
